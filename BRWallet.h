@@ -35,9 +35,11 @@
 extern "C" {
 #endif
 
-#define DEFAULT_FEE_PER_KB ((5000ULL*1000 + 99)/100) // bitcoind 0.11 min relay fee on 100bytes
-#define MIN_FEE_PER_KB     ((TX_FEE_PER_KB*1000 + 190)/191) // minimum relay fee on a 191byte tx
-#define MAX_FEE_PER_KB     ((1000100ULL*1000 + 190)/191) // slightly higher than a 10000bit fee on a 191byte tx
+#define DEFAULT_FEE_PER_KB ((5000*10000 + 99)/100) // bitcoind 0.11 min relay fee on 100bytes
+//#define DEFAULT_FEE_PER_KB     ((TX_FEE_PER_KB*1000 + 190)/191) // minimum relay fee on a 191byte tx
+#define MIN_FEE_PER_KB     ((TX_FEE_PER_KB*100 + 190)/191) // minimum relay fee on a 191byte tx
+#define MAX_FEE_PER_KB     ((200100*100 + 190)/191) // slightly higher than a 1000bit fee on a 191byte tx
+//#define MAX_FEE_PER_KB     ((TX_FEE_PER_KB*2000 + 190)/191) // minimum relay fee on a 191byte tx
 
 typedef struct {
     UInt256 hash;
@@ -124,6 +126,10 @@ void BRWalletSetFeePerKb(BRWallet *wallet, uint64_t feePerKb);
 // returns an unsigned transaction that sends the specified amount from the wallet to the given address
 // result must be freed using BRTransactionFree()
 BRTransaction *BRWalletCreateTransaction(BRWallet *wallet, uint64_t amount, const char *addr);
+
+// returns an unsigned transaction that sends the specified amount from the wallet to the given address (POS)
+// result must be freed using BRTransactionFree()
+BRTransaction *BRWalletCreateDistTransaction(BRWallet *wallet, uint64_t amount, const char *addr, const char *devaddr, const char *distaddr);
 
 // returns an unsigned transaction that satisifes the given transaction outputs
 // result must be freed using BRTransactionFree()

@@ -39,7 +39,9 @@ extern "C" {
 #endif
 
 // bitcoin address prefixes
-#define BITCOIN_PUBKEY_ADDRESS      48
+#define BITCOIN_PUBKEY_ADDRESS      63
+#define BITCOIN_PUBKEY_ADDRESS_VANITY1    30  //(30 or 31 or 90 decimal value to obtain the letter D or d, from https://en.bitcoin.it/wiki/List_of_address_prefixes
+
 #define BITCOIN_SCRIPT_ADDRESS      50
 #define BITCOIN_PUBKEY_ADDRESS_TEST 111
 #define BITCOIN_SCRIPT_ADDRESS_TEST 58

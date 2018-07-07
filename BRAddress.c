@@ -319,6 +319,7 @@ size_t BRAddressFromScriptSig(char *addr, size_t addrLen, const uint8_t *script,
 size_t BRAddressScriptPubKey(uint8_t *script, size_t scriptLen, const char *addr)
 {
     static uint8_t pubkeyAddress = BITCOIN_PUBKEY_ADDRESS, scriptAddress = BITCOIN_SCRIPT_ADDRESS;
+//    static uint8_t vanity1 = BITCOIN_PUBKEY_ADDRESS_VANITY1; && data[1] == vanity1
     uint8_t data[21];
     size_t r = 0;
     
@@ -330,7 +331,8 @@ size_t BRAddressScriptPubKey(uint8_t *script, size_t scriptLen, const char *addr
 #endif
     
     if (BRBase58CheckDecode(data, sizeof(data), addr) == 21) {
-        if (data[0] == pubkeyAddress) {
+        if (data[0] == pubkeyAddress ) {
+
             if (script && 25 <= scriptLen) {
                 script[0] = OP_DUP;
                 script[1] = OP_HASH160;
