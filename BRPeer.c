@@ -46,7 +46,7 @@
 #if BITCOIN_TESTNET
 #define MAGIC_NUMBER 0xf1c8d2fd
 #else
-#define MAGIC_NUMBER 0xdbb6c0fb
+#define MAGIC_NUMBER 0xecf5e1d0
 #endif
 #define HEADER_LENGTH      24
 #define MAX_MSG_LENGTH     0x02000000
@@ -804,7 +804,7 @@ static int _BRPeerAcceptFeeFilterMessage(BRPeer *peer, const uint8_t *msg, size_
     }
     else {
         ctx->feePerKb = UInt64GetLE(msg);
-        peer_log(peer, "got feefilter with rate %"PRIu64, ctx->feePerKb);
+        peer_log(peer, "got feefilter with rate %llu", ctx->feePerKb);
         if (ctx->setFeePerKb) ctx->setFeePerKb(ctx->info, ctx->feePerKb);
     }
     

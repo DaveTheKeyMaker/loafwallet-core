@@ -51,9 +51,9 @@ struct BRWalletStruct {
 
 inline static uint64_t _txFee(uint64_t feePerKb, size_t size)
 {
-    uint64_t standardFee = ((size + 999)/1000)*TX_FEE_PER_KB, // standard fee based on tx size rounded up to nearest kb
-             fee = (((size*feePerKb/1000) + 99)/100)*100; // fee using feePerKb, rounded up to nearest 100 satoshi
-    
+    uint64_t standardFee = ((size + 999)/10000)*TX_FEE_PER_KB, // standard fee based on tx size rounded up to nearest kb
+            fee = (((size*feePerKb/1000) + 99)/100)*100
+    ; // fee using feePerKb, rounded up to nearest 100 satoshi
     return (fee > standardFee) ? fee : standardFee;
 }
 
@@ -333,13 +333,13 @@ size_t BRWalletUnusedAddrs(BRWallet *wallet, BRAddress addrs[], uint32_t gapLimi
     
     // keep only the trailing contiguous block of addresses with no transactions
     while (i > 0 && ! BRSetContains(wallet->usedAddrs, &addrChain[i - 1])) i--;
-    
+
     while (i + gapLimit > count) { // generate new addresses up to gapLimit
         BRKey key;
         BRAddress address = BR_ADDRESS_NONE;
         uint8_t pubKey[BRBIP32PubKey(NULL, 0, wallet->masterPubKey, chain, count)];
         size_t len = BRBIP32PubKey(pubKey, sizeof(pubKey), wallet->masterPubKey, chain, (uint32_t)count);
-        
+
         if (! BRKeySetPubKey(&key, pubKey, len)) break;
         if (! BRKeyAddress(&key, address.s, sizeof(address)) || BRAddressEq(&address, &BR_ADDRESS_NONE)) break;
         array_add(addrChain, address);
@@ -548,10 +548,28 @@ int BRWalletAddressIsUsed(BRWallet *wallet, const char *addr)
 
 // returns an unsigned transaction that sends the specified amount from the wallet to the given address
 // result must be freed by calling BRTransactionFree()
+BRTransaction *BRWalletCreateDistTransaction(BRWallet *wallet, uint64_t amount, const char *addr, const char *devaddr, const char *distaddr)
+{
+    BRTxOutput o[] = {BR_TX_OUTPUT_NONE,BR_TX_OUTPUT_NONE,BR_TX_OUTPUT_NONE};
+    assert(wallet != NULL);
+    assert(amount > 0);
+    assert(addr != NULL && BRAddressIsValid(addr));
+    assert(devaddr != NULL && BRAddressIsValid(devaddr));
+    assert(distaddr != NULL && BRAddressIsValid(distaddr));
+    o[0].amount = amount;
+    o[1].amount = (uint64_t) (amount * 0.0025);
+    o[2].amount = (uint64_t) (amount * 0.0025);
+    BRTxOutputSetAddress(&o[0], addr);
+    BRTxOutputSetAddress(&o[1], devaddr);  //business registrations wallet
+    BRTxOutputSetAddress(&o[2], distaddr);  //distributor address
+    return BRWalletCreateTxForOutputs(wallet, (const BRTxOutput *) &o, 3);
+}
+
+// returns an unsigned transaction that sends the specified amount from the wallet to the given address
+// result must be freed by calling BRTransactionFree()
 BRTransaction *BRWalletCreateTransaction(BRWallet *wallet, uint64_t amount, const char *addr)
 {
     BRTxOutput o = BR_TX_OUTPUT_NONE;
-    
     assert(wallet != NULL);
     assert(amount > 0);
     assert(addr != NULL && BRAddressIsValid(addr));
@@ -642,7 +660,7 @@ BRTransaction *BRWalletCreateTxForOutputs(BRWallet *wallet, const BRTxOutput out
         BRTransactionFree(transaction);
         transaction = NULL;
     }
-    else if (transaction && balance - (amount + feeAmount) > minAmount) { // add change output
+    else if (transaction && balance - (amount + feeAmount) >= minAmount) { // add change output
         BRWalletUnusedAddrs(wallet, &addr, 1, 1);
         uint8_t script[BRAddressScriptPubKey(NULL, 0, addr.s)];
         size_t scriptLen = BRAddressScriptPubKey(script, sizeof(script), addr.s);
@@ -935,7 +953,7 @@ void BRWalletUpdateTransactions(BRWallet *wallet, const UInt256 txHashes[], size
     BRTransaction *tx;
     UInt256 hashes[txCount];
     int needsUpdate = 0;
-    size_t i, j, k;
+    size_t i, j;
     
     assert(wallet != NULL);
     assert(txHashes != NULL || txCount == 0);
@@ -949,13 +967,6 @@ void BRWalletUpdateTransactions(BRWallet *wallet, const UInt256 txHashes[], size
         tx->blockHeight = blockHeight;
         
         if (_BRWalletContainsTx(wallet, tx)) {
-            for (k = array_count(wallet->transactions); k > 0; k--) { // remove and re-insert tx to keep wallet sorted
-                if (! BRTransactionEq(wallet->transactions[k - 1], tx)) continue;
-                array_rm(wallet->transactions, k - 1);
-                _BRWalletInsertTx(wallet, tx);
-                break;
-            }
-            
             hashes[j++] = txHashes[i];
             if (BRSetContains(wallet->pendingTx, tx) || BRSetContains(wallet->invalidTx, tx)) needsUpdate = 1;
         }
@@ -1097,8 +1108,8 @@ uint64_t BRWalletFeeForTxSize(BRWallet *wallet, size_t size)
 // fee that will be added for a transaction of the given amount
 uint64_t BRWalletFeeForTxAmount(BRWallet *wallet, uint64_t amount)
 {
-    static const uint8_t dummyScript[] = { OP_DUP, OP_HASH160, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                           0, 0, 0, 0, 0, 0, 0, 0, 0, OP_EQUALVERIFY, OP_CHECKSIG };
+    static const uint8_t dummyScript[] = { OP_DUP, OP_HASH160, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                           0, 0, OP_EQUALVERIFY, OP_CHECKSIG };
     BRTxOutput o = BR_TX_OUTPUT_NONE;
     BRTransaction *tx;
     uint64_t fee = 0, maxAmount = 0;
